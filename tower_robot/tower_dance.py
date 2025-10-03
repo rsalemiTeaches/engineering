@@ -1,110 +1,76 @@
-# Alvik Tower Test Program
-# For Themes in Engineering - Project 03: The Robot Tower
-#
-# This program makes the Alvik robot perform a series of random but
-# inherently tethered movements for 30 seconds. Each sequence involves
-# moving out and back to the starting point before turning, ensuring
-# the robot does not wander off the platform.
+# Alvik Tower Dance Code - Stress Test Version (Distance-Based)
+# This program makes the Alvik robot perform a series of random
+# forward, backward, and turning motions for a fixed duration to test
+# the stability of the student-built tower. This version uses the
+# official distance and rotation functions from the library.
 
+# Import necessary libraries
 from arduino_alvik import ArduinoAlvik
-from time import sleep_ms, ticks_ms, ticks_diff
-import urandom
+import time
+import random
 
-# --- Configuration Constants ---
-RUN_DURATION_MS = 30000  # 30 seconds
+# --- Constants ---
+# The total duration of the test dance in seconds.
+TEST_DURATION = 30
 
-# --- Randomization Limits (for each individual movement) ---
-MIN_MOVE_CM = 4
-MAX_MOVE_CM = 8  # Increased from 5
-MIN_ROTATE_DEG = 30
-MAX_ROTATE_DEG = 90
-PAUSE_MS = 250
-
-# --- New Speed Randomization Limits ---
-MIN_DRIVE_SPEED_CM_S = 8
-MAX_DRIVE_SPEED_CM_S = 25
-MIN_ROTATE_SPEED_DEG_S = 45
-MAX_ROTATE_SPEED_DEG_S = 200
-
-alvik = ArduinoAlvik()
-
+# --- Main Program ---
 try:
+    # Initialize the Alvik robot.
+    alvik = ArduinoAlvik()
+    # ** Wake up the robot's hardware. **
     alvik.begin()
+    
+    # Get the start time of the test.
+    start_time = time.time()
 
-    # Wait for the OK button to be pressed before starting the test.
-    print("Ready for tower test. Press OK to begin.")
-    while not alvik.get_touch_ok():
-        alvik.left_led.set_color(0, 0, 1); alvik.right_led.set_color(0, 0, 1)
-        sleep_ms(200)
-        alvik.left_led.set_color(0, 0, 0); alvik.right_led.set_color(0, 0, 0)
-        sleep_ms(200)
-        if alvik.get_touch_cancel(): raise KeyboardInterrupt
+    print(f"Starting {TEST_DURATION} second tower dance...")
 
-    print("Starting 30-second test with tethered random movements...")
-    alvik.left_led.set_color(0, 1, 0); alvik.right_led.set_color(0, 1, 0)
+    # The main loop. It runs as long as the elapsed time is less than the total test duration.
+    while (time.time() - start_time) < TEST_DURATION:
 
-    start_time = ticks_ms()
+        # Set LEDs to blue to indicate the test is running.
+        alvik.left_led.set_color(0, 0, 1)  # Blue
+        alvik.right_led.set_color(0, 0, 1) # Blue
 
-    while ticks_diff(ticks_ms(), start_time) < RUN_DURATION_MS:
+        # --- 1. Forward/Backward Movement ---
+
+        # Choose a random distance between 3 and 9 centimeters.
+        move_distance_cm = random.uniform(3, 9)
         
-        # --- "THERE AND BACK AGAIN" SEQUENCE ---
+        # Choose a random direction (1 for forward, -1 for backward).
+        move_direction = random.choice([1, -1])
+
+        # Move the specified distance. The function defaults to 'cm'.
+        alvik.move(move_distance_cm * move_direction)
+        time.sleep(0.2) # A brief pause
+
+        # --- 2. Return to Start ---
+
+        # Move in the opposite direction for the SAME distance to return to the center.
+        alvik.move(-move_distance_cm * move_direction)
+        time.sleep(0.2) # A brief pause
+
+        # --- 3. Turning Movement ---
         
-        # 1. Linear Movement Phase
-        move_dist = urandom.randint(MIN_MOVE_CM, MAX_MOVE_CM)
-        move_speed = urandom.randint(MIN_DRIVE_SPEED_CM_S, MAX_DRIVE_SPEED_CM_S)
-        # To use a variable speed, we must calculate the duration of the move.
-        # duration (sec) = distance (cm) / speed (cm/s)
-        duration_ms = int((move_dist / move_speed) * 1000)
-        
-        # Randomly decide to go forward first or backward first
-        if urandom.randint(0, 1) == 0:
-            print(f"Sequence: Forward {move_dist}cm at {move_speed}cm/s, then Backward")
-            alvik.drive(move_speed, 0)
-            sleep_ms(duration_ms)
-            alvik.brake()
-            sleep_ms(PAUSE_MS)
-            alvik.drive(-move_speed, 0)
-            sleep_ms(duration_ms)
-            alvik.brake()
-        else:
-            print(f"Sequence: Backward {move_dist}cm at {move_speed}cm/s, then Forward")
-            alvik.drive(-move_speed, 0)
-            sleep_ms(duration_ms)
-            alvik.brake()
-            sleep_ms(PAUSE_MS)
-            alvik.drive(move_speed, 0)
-            sleep_ms(duration_ms)
-            alvik.brake()
-            
-        sleep_ms(PAUSE_MS)
+        # Choose a random angle to turn in degrees.
+        turn_angle = random.randint(45, 120)
 
-        # 2. Rotational Phase
-        turn_angle = urandom.randint(MIN_ROTATE_DEG, MAX_ROTATE_DEG)
-        turn_speed = urandom.randint(MIN_ROTATE_SPEED_DEG_S, MAX_ROTATE_SPEED_DEG_S)
-        # duration (sec) = angle (deg) / speed (deg/s)
-        duration_ms = int((turn_angle / turn_speed) * 1000)
+        # Choose a random turn direction (1 for right, -1 for left).
+        turn_direction = random.choice([1, -1])
 
-        # Randomly decide to turn left or right
-        if urandom.randint(0, 1) == 0:
-            print(f"Sequence: Turn Left {turn_angle} deg at {turn_speed}deg/s")
-            alvik.drive(0, turn_speed) # Positive angular speed is counter-clockwise (left)
-            sleep_ms(duration_ms)
-            alvik.brake()
-        else:
-            print(f"Sequence: Turn Right {turn_angle} deg at {turn_speed}deg/s")
-            alvik.drive(0, -turn_speed) # Negative angular speed is clockwise (right)
-            sleep_ms(duration_ms)
-            alvik.brake()
+        # Execute the turn for the specified angle. 
+        # The speed argument is removed as it caused the error.
+        alvik.rotate(turn_angle * turn_direction)
+        time.sleep(0.2) # A brief pause before the next cycle
 
-        sleep_ms(PAUSE_MS)
-
-        # Check for cancel button press to allow early exit
-        if alvik.get_touch_cancel():
-            break
-
-    print("Test complete!")
+    print("Dance complete.")
 
 finally:
-    print("Stopping robot.")
+    # This 'finally' block is MANDATORY for all Alvik programs.
+    # It ensures that no matter what happens, the motors will be safely turned off.
     alvik.stop()
+    # Turn off the LEDs.
+    alvik.left_led.set_color(0, 0, 0)
+    alvik.right_led.set_color(0, 0, 0)
+    print("Program stopped safely.")
 
