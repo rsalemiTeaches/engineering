@@ -19,14 +19,31 @@ try:
     alvik = ArduinoAlvik()
     # ** Wake up the robot's hardware. **
     alvik.begin()
-    
+
+    # --- Wait for Start Signal ---
+    print("Ready to dance... Press OK (checkmark) to start.")
+    # Loop indefinitely, blinking the LEDs, until the OK button is pressed.
+    while not alvik.get_touch_ok():
+        alvik.left_led.set_color(0, 1, 0)  # Green
+        alvik.right_led.set_color(0, 1, 0) # Green
+        time.sleep(0.25)
+        alvik.left_led.set_color(0, 0, 0)  # Off
+        alvik.right_led.set_color(0, 0, 0) # Off
+        time.sleep(0.25)
+
+        # Allow user to cancel the program while waiting
+        if alvik.get_touch_cancel():
+            raise KeyboardInterrupt("Program cancelled by user before dance started.")
+
+    # --- Start the Timed Dance ---
     # Get the start time of the test.
     start_time = time.time()
 
     print(f"Starting {TEST_DURATION} second tower dance...")
 
-    # The main loop. It runs as long as the elapsed time is less than the total test duration.
-    while (time.time() - start_time) < TEST_DURATION:
+    # The main loop. It runs as long as the elapsed time is less than the total test duration
+    # AND the user has not pressed the 'X' (cancel) button.
+    while (time.time() - start_time) < TEST_DURATION and not alvik.get_touch_cancel():
 
         # Set LEDs to blue to indicate the test is running.
         alvik.left_led.set_color(0, 0, 1)  # Blue
@@ -35,7 +52,7 @@ try:
         # --- 1. Forward/Backward Movement ---
 
         # Choose a random distance between 3 and 9 centimeters.
-        move_distance_cm = random.uniform(3, 9)
+        move_distance_cm = random.uniform(3, 8)
         
         # Choose a random direction (1 for forward, -1 for backward).
         move_direction = random.choice([1, -1])
@@ -63,7 +80,11 @@ try:
         alvik.rotate(turn_angle * turn_direction)
         time.sleep(0.2) # A brief pause before the next cycle
 
-    print("Dance complete.")
+    # After the loop, check why it ended.
+    if alvik.get_touch_cancel():
+        print("Emergency stop button pressed.")
+    else:
+        print("Dance complete.")
 
 finally:
     # This 'finally' block is MANDATORY for all Alvik programs.
